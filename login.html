@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group Pulse - Login</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+  <div class="topbar">
+  <div class="brand">
+    <img src="logo.png" alt="Group Pulse" class="brand-logo">
+    <h1>Group<span style="color:#05ddc8">PULSE</span></h1>
+  </div>
+  </div>
+
+  <div class="box">
+
+    <div class="tabs">
+      <button id="loginTab" onclick="showLogin()">Login</button>
+      <button id="registerTab" onclick="showRegister()">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <h3>Login to your account</h3>
+
+      <label>Email:</label>
+      <input type="text" id="loginEmail" placeholder="Enter your email" />
+
+      <label>Password:</label>
+      <input type="password" id="loginPassword" placeholder="Enter your password" />
+
+      <br><br>
+      <button class="btn-blue" onclick="doLogin()">Login</button>
+      <p id="loginMsg" class="msg"></p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" style="display:none;">
+      <h3>Create an account</h3>
+
+      <label>Full Name:</label>
+      <input type="text" id="regName" placeholder="Enter your full name" />
+
+      <label>Email:</label>
+      <input type="text" id="regEmail" placeholder="Enter your email" />
+
+      <label>Password:</label>
+      <input type="password" id="regPassword" placeholder="Create a password" />
+
+      <label>I am a:</label>
+      <select id="regRole">
+        <option value="">-- Select Role --</option>
+        <option value="student">Student</option>
+        <option value="instructor">Instructor</option>
+      </select>
+
+      <br><br>
+      <button class="btn-blue" onclick="doRegister()">Register</button>
+      <p id="registerMsg" class="msg"></p>
+    </div>
+
+  </div>
+
+  <script>
+    function showLogin() {
+      document.getElementById("loginForm").style.display = "block";
+      document.getElementById("registerForm").style.display = "none";
+      document.getElementById("loginTab").className = "active-tab";
+      document.getElementById("registerTab").className = "";
+    }
+
+    function showRegister() {
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("registerForm").style.display = "block";
+      document.getElementById("loginTab").className = "";
+      document.getElementById("registerTab").className = "active-tab";
+    }
+
+    function doLogin() {
+      var email = document.getElementById("loginEmail").value;
+      var password = document.getElementById("loginPassword").value;
+
+      if (email == "" || password == "") {
+        document.getElementById("loginMsg").style.color = "red";
+        document.getElementById("loginMsg").innerHTML = "Please fill in all fields!";
+        return;
+      }
+
+      var users = JSON.parse(localStorage.getItem("gp_users") || "[]");
+      var found = null;
+
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].email == email && users[i].password == password) {
+          found = users[i];
+          break;
+        }
+      }
+
+      if (found) {
+        localStorage.setItem("gp_loggedIn", JSON.stringify(found));
+        document.getElementById("loginMsg").style.color = "green";
+        document.getElementById("loginMsg").innerHTML = "Login successful! Redirecting...";
+        setTimeout(function() {
+          window.location.href = "lobby.html";
+        }, 1000);
+      } else {
+        document.getElementById("loginMsg").style.color = "red";
+        document.getElementById("loginMsg").innerHTML = "Wrong email or password!";
+      }
+    }
+
+    function doRegister() {
+      var name = document.getElementById("regName").value;
+      var email = document.getElementById("regEmail").value;
+      var password = document.getElementById("regPassword").value;
+      var role = document.getElementById("regRole").value;
+
+      if (name == "" || email == "" || password == "" || role == "") {
+        document.getElementById("registerMsg").style.color = "red";
+        document.getElementById("registerMsg").innerHTML = "Please fill in all fields!";
+        return;
+      }
+
+      var users = JSON.parse(localStorage.getItem("gp_users") || "[]");
+
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].email == email) {
+          document.getElementById("registerMsg").style.color = "red";
+          document.getElementById("registerMsg").innerHTML = "Email already registered!";
+          return;
+        }
+      }
+
+      var newUser = {
+        id: "user_" + Date.now(),
+        name: name,
+        email: email,
+        password: password,
+        role: role
+      };
+
+      users.push(newUser);
+      localStorage.setItem("gp_users", JSON.stringify(users));
+
+      document.getElementById("registerMsg").style.color = "green";
+      document.getElementById("registerMsg").innerHTML = "Account created! You can now login.";
+    }
+
+    document.getElementById("loginTab").className = "active-tab";
+  </script>
+
+</body>
+</html>

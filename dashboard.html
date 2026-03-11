@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group Pulse - Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <span><b>Group Pulse</b></span>
+    <span id="welcomeMsg"></span>
+    <div>
+      <button onclick="goLobby()">Back to Lobby</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- nav links -->
+  <div class="navbar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="tasks.html" id="tasksLink">Tasks</a>
+    <a href="progress.html">Progress</a>
+    <a href="evaluation.html">Peer Evaluation</a>
+  </div>
+
+  <div class="content">
+
+    <!-- group header -->
+    <div class="group-header">
+      <div>
+        <h2 id="groupName">Loading...</h2>
+        <p id="groupSubject"></p>
+        <p id="groupDesc"></p>
+      </div>
+      <div class="group-info-right">
+        <p>📅 Due: <b id="groupDue"></b></p>
+        <p>👤 Leader: <b id="groupLeader"></b></p>
+        <p id="inviteSection"></p>
+      </div>
+    </div>
+
+    <!-- summary cards -->
+    <div class="cards">
+      <div class="card blue">
+        <h3 id="totalTasks">0</h3>
+        <p>Total Tasks</p>
+      </div>
+      <div class="card green">
+        <h3 id="doneTasks">0</h3>
+        <p>Completed</p>
+      </div>
+      <div class="card orange">
+        <h3 id="pendingTasks">0</h3>
+        <p>Pending</p>
+      </div>
+      <div class="card purple">
+        <h3 id="totalMembers">0</h3>
+        <p>Members</p>
+      </div>
+    </div>
+
+    <!-- members list -->
+    <div class="section">
+      <h3>Group Members</h3>
+      <div id="membersList"><p>No members yet.</p></div>
+    </div>
+
+    <!-- recent tasks -->
+    <div class="section">
+      <h3>Recent Tasks</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Assigned To</th>
+            <th>Due Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="recentTasks">
+          <tr><td colspan="4">No tasks yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    var loggedIn = JSON.parse(localStorage.getItem("gp_loggedIn") || "null");
+    var activeGroupId = localStorage.getItem("gp_activeGroup");
+
+    if (!loggedIn) { window.location.href = "login.html"; }
+    if (!activeGroupId) { window.location.href = "lobby.html"; }
+
+    document.getElementById("welcomeMsg").innerHTML = loggedIn.name + " (" + loggedIn.role + ")";
+
+    function logout() {
+      localStorage.removeItem("gp_loggedIn");
+      window.location.href = "login.html";
+    }
+
+    function goLobby() {
+      localStorage.removeItem("gp_activeGroup");
+      window.location.href = "lobby.html";
+    }
+
+    // load group info
+    var groups = JSON.parse(localStorage.getItem("gp_groups") || "[]");
+    var group = null;
+
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].id == activeGroupId) {
+        group = groups[i];
+        break;
+      }
+    }
+
+    if (!group) {
+      alert("Group not found!");
+      window.location.href = "lobby.html";
+    }
+
+    document.getElementById("groupName").innerHTML = group.name;
+    document.getElementById("groupSubject").innerHTML = "📚 " + group.subject;
+    document.getElementById("groupDesc").innerHTML = group.description || "";
+    document.getElementById("groupDue").innerHTML = group.dueDate;
+    document.getElementById("groupLeader").innerHTML = group.leaderName;
+
+    // show invite code if student
+    var isGroupLeader = group.leader == loggedIn.id || group.leaderName == loggedIn.name;
+    if (loggedIn.role != "instructor") {
+      document.getElementById("inviteSection").innerHTML =
+        "🔗 Invite Code: <b>" + group.code + "</b> " +
+        "<button onclick='copyCode()' style='font-size:11px; padding:3px 8px; cursor:pointer;'>Copy Code</button>";
+    }
+
+    function copyCode() {
+      var link = group.code;
+      navigator.clipboard.writeText(link).then(function() {
+        alert("Invite code copied!\n\n" + link);
+      });
+    }
+
+    // members
+    var memberNames = group.memberNames || [];
+    document.getElementById("totalMembers").innerHTML = memberNames.length;
+
+    if (memberNames.length > 0) {
+      var mHTML = "";
+      for (var i = 0; i < memberNames.length; i++) {
+        var isLeader = memberNames[i] == group.leaderName;
+        mHTML += "<span class='member-tag'>";
+        mHTML += memberNames[i];
+        if (isLeader) mHTML += " 👑";
+        mHTML += "</span>";
+      }
+      document.getElementById("membersList").innerHTML = mHTML;
+    }
+
+    // tasks for this group
+    var allTasks = JSON.parse(localStorage.getItem("gp_tasks_" + activeGroupId) || "[]");
+    var done = 0, pending = 0;
+    for (var i = 0; i < allTasks.length; i++) {
+      if (allTasks[i].status == "Done") done++;
+      else pending++;
+    }
+
+    document.getElementById("totalTasks").innerHTML = allTasks.length;
+    document.getElementById("doneTasks").innerHTML = done;
+    document.getElementById("pendingTasks").innerHTML = pending;
+
+    // recent 5 tasks
+    if (allTasks.length > 0) {
+      var start = Math.max(0, allTasks.length - 5);
+      var tHTML = "";
+      for (var i = start; i < allTasks.length; i++) {
+        var c = allTasks[i].status == "Done" ? "green" : "orange";
+        tHTML += "<tr><td>" + allTasks[i].name + "</td><td>" + allTasks[i].assignedTo + "</td><td>" + allTasks[i].dueDate + "</td><td style='color:" + c + ";'>" + allTasks[i].status + "</td></tr>";
+      }
+      document.getElementById("recentTasks").innerHTML = tHTML;
+    }
+
+    // instructor: tasks link not restricted but task creation will be
+    if (loggedIn.role == "instructor") {
+      document.getElementById("tasksLink").title = "View only";
+    }
+  </script>
+
+</body>
+</html>

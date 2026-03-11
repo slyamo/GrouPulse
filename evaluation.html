@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group Pulse - Peer Evaluation</title>
+  <link rel="stylesheet" href="evaluation.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <span><b>Group Pulse</b></span>
+    <span id="welcomeMsg"></span>
+    <div>
+      <button onclick="goLobby()">← Back to Lobby</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="navbar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="tasks.html">Tasks</a>
+    <a href="progress.html">Progress</a>
+    <a href="evaluation.html">Peer Evaluation</a>
+  </div>
+
+  <div class="content">
+    <h2>Peer Evaluation</h2>
+    <p id="groupNameLabel"></p>
+
+    <!-- instructor view notice -->
+    <div id="instructorNotice" style="display:none;">
+      <div class="notice-box">
+        <p>📋 You are viewing peer evaluation results as an <b>Instructor</b>. You cannot submit evaluations.</p>
+      </div>
+    </div>
+
+    <!-- evaluation form - students only -->
+    <div id="evalFormSection">
+      <div class="form-box">
+        <h3>Submit Evaluation</h3>
+
+        <label>Select Member to Evaluate:</label>
+        <select id="evalMember">
+          <option value="">-- Select Member --</option>
+        </select>
+
+        <label>Contribution to Tasks (1 - 5):</label>
+        <select id="ratingContrib">
+          <option value="">-- Rate --</option>
+          <option value="1">1 - Very Poor</option>
+          <option value="2">2 - Poor</option>
+          <option value="3">3 - Average</option>
+          <option value="4">4 - Good</option>
+          <option value="5">5 - Excellent</option>
+        </select>
+
+        <label>Communication & Teamwork (1 - 5):</label>
+        <select id="ratingTeam">
+          <option value="">-- Rate --</option>
+          <option value="1">1 - Very Poor</option>
+          <option value="2">2 - Poor</option>
+          <option value="3">3 - Average</option>
+          <option value="4">4 - Good</option>
+          <option value="5">5 - Excellent</option>
+        </select>
+
+        <label>Meeting Deadlines (1 - 5):</label>
+        <select id="ratingDeadline">
+          <option value="">-- Rate --</option>
+          <option value="1">1 - Very Poor</option>
+          <option value="2">2 - Poor</option>
+          <option value="3">3 - Average</option>
+          <option value="4">4 - Good</option>
+          <option value="5">5 - Excellent</option>
+        </select>
+
+        <label>Comments (optional):</label>
+        <textarea id="evalComment" rows="3" placeholder="Any comments about this member..."></textarea>
+
+        <br><br>
+        <button class="btn-blue" onclick="submitEval()">Submit Evaluation</button>
+        <p id="evalMsg" class="msg"></p>
+      </div>
+    </div>
+
+    <!-- results - visible to all -->
+    <div class="section">
+      <h3>Average Scores Per Member</h3>
+      <div id="evalResults"><p>No evaluations submitted yet.</p></div>
+    </div>
+
+    <!-- all evaluations table -->
+    <div class="section">
+      <h3>All Submitted Evaluations</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Evaluated By</th>
+            <th>Member</th>
+            <th>Contribution</th>
+            <th>Teamwork</th>
+            <th>Deadline</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody id="evalTable">
+          <tr><td colspan="6">No evaluations yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    var loggedIn = JSON.parse(localStorage.getItem("gp_loggedIn") || "null");
+    var activeGroupId = localStorage.getItem("gp_activeGroup");
+
+    if (!loggedIn) { window.location.href = "login.html"; }
+    if (!activeGroupId) { window.location.href = "lobby.html"; }
+
+    document.getElementById("welcomeMsg").innerHTML = loggedIn.name + " (" + loggedIn.role + ")";
+
+    function logout() {
+      localStorage.removeItem("gp_loggedIn");
+      window.location.href = "login.html";
+    }
+
+    function goLobby() {
+      localStorage.removeItem("gp_activeGroup");
+      window.location.href = "lobby.html";
+    }
+
+    // get group
+    var groups = JSON.parse(localStorage.getItem("gp_groups") || "[]");
+    var group = null;
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].id == activeGroupId) { group = groups[i]; break; }
+    }
+
+    if (group) {
+      document.getElementById("groupNameLabel").innerHTML = "Group: <b>" + group.name + "</b> — " + group.subject;
+    }
+
+    // instructors can only view
+    if (loggedIn.role == "instructor") {
+      document.getElementById("instructorNotice").style.display = "block";
+      document.getElementById("evalFormSection").style.display = "none";
+    } else {
+      // load members into dropdown (can't evaluate yourself)
+      var memberNames = group ? group.memberNames : [];
+      var dropdown = document.getElementById("evalMember");
+      for (var i = 0; i < memberNames.length; i++) {
+        if (memberNames[i] != loggedIn.name) {
+          var opt = document.createElement("option");
+          opt.value = memberNames[i];
+          opt.innerHTML = memberNames[i];
+          dropdown.appendChild(opt);
+        }
+      }
+    }
+
+    function submitEval() {
+      var member = document.getElementById("evalMember").value;
+      var contrib = document.getElementById("ratingContrib").value;
+      var team = document.getElementById("ratingTeam").value;
+      var deadline = document.getElementById("ratingDeadline").value;
+      var comment = document.getElementById("evalComment").value;
+
+      if (member == "" || contrib == "" || team == "" || deadline == "") {
+        document.getElementById("evalMsg").style.color = "red";
+        document.getElementById("evalMsg").innerHTML = "Please complete all required fields!";
+        return;
+      }
+
+      var evals = JSON.parse(localStorage.getItem("gp_evals_" + activeGroupId) || "[]");
+
+      // one evaluation per person per member
+      for (var i = 0; i < evals.length; i++) {
+        if (evals[i].evaluatedBy == loggedIn.name && evals[i].member == member) {
+          document.getElementById("evalMsg").style.color = "orange";
+          document.getElementById("evalMsg").innerHTML = "You already evaluated " + member + "!";
+          return;
+        }
+      }
+
+      var newEval = {
+        evaluatedBy: loggedIn.name,
+        member: member,
+        contribution: parseInt(contrib),
+        teamwork: parseInt(team),
+        deadline: parseInt(deadline),
+        comment: comment
+      };
+
+      evals.push(newEval);
+      localStorage.setItem("gp_evals_" + activeGroupId, JSON.stringify(evals));
+
+      document.getElementById("evalMsg").style.color = "green";
+      document.getElementById("evalMsg").innerHTML = "Evaluation submitted!";
+
+      document.getElementById("evalMember").value = "";
+      document.getElementById("ratingContrib").value = "";
+      document.getElementById("ratingTeam").value = "";
+      document.getElementById("ratingDeadline").value = "";
+      document.getElementById("evalComment").value = "";
+
+      loadEvals();
+    }
+
+    function loadEvals() {
+      var evals = JSON.parse(localStorage.getItem("gp_evals_" + activeGroupId) || "[]");
+
+      if (evals.length == 0) {
+        document.getElementById("evalTable").innerHTML = "<tr><td colspan='6'>No evaluations yet.</td></tr>";
+        document.getElementById("evalResults").innerHTML = "<p>No evaluations submitted yet.</p>";
+        return;
+      }
+
+      // table
+      var tHTML = "";
+      for (var i = 0; i < evals.length; i++) {
+        tHTML += "<tr>";
+        tHTML += "<td>" + evals[i].evaluatedBy + "</td>";
+        tHTML += "<td>" + evals[i].member + "</td>";
+        tHTML += "<td>" + evals[i].contribution + "/5</td>";
+        tHTML += "<td>" + evals[i].teamwork + "/5</td>";
+        tHTML += "<td>" + evals[i].deadline + "/5</td>";
+        tHTML += "<td>" + (evals[i].comment || "-") + "</td>";
+        tHTML += "</tr>";
+      }
+      document.getElementById("evalTable").innerHTML = tHTML;
+
+      // averages per member
+      var scores = {};
+      for (var i = 0; i < evals.length; i++) {
+        var m = evals[i].member;
+        if (!scores[m]) { scores[m] = { contrib: 0, team: 0, deadline: 0, count: 0 }; }
+        scores[m].contrib += evals[i].contribution;
+        scores[m].team += evals[i].teamwork;
+        scores[m].deadline += evals[i].deadline;
+        scores[m].count++;
+      }
+
+      var rHTML = "";
+      for (var name in scores) {
+        var s = scores[name];
+        var avgC = (s.contrib / s.count).toFixed(1);
+        var avgT = (s.team / s.count).toFixed(1);
+        var avgD = (s.deadline / s.count).toFixed(1);
+        var overall = ((s.contrib + s.team + s.deadline) / (s.count * 3)).toFixed(1);
+
+        var overallColor = overall >= 4 ? "#5cb85c" : overall >= 2.5 ? "#f0ad4e" : "#d9534f";
+
+        rHTML += "<div class='result-card'>";
+        rHTML += "<h4>" + name + "</h4>";
+        rHTML += "<p>Contribution: <b>" + avgC + " / 5</b></p>";
+        rHTML += "<p>Teamwork: <b>" + avgT + " / 5</b></p>";
+        rHTML += "<p>Deadlines: <b>" + avgD + " / 5</b></p>";
+        rHTML += "<p class='overall' style='color:" + overallColor + ";'>Overall: <b>" + overall + " / 5</b></p>";
+        rHTML += "<p class='eval-count'>Based on " + s.count + " evaluation(s)</p>";
+        rHTML += "</div>";
+      }
+      document.getElementById("evalResults").innerHTML = rHTML;
+    }
+
+    loadEvals();
+  </script>
+
+</body>
+</html>

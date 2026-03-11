@@ -1,0 +1,153 @@
+body {
+  background-color: #f0f0f0;
+  font-family: Arial;
+  margin: 0;
+  padding: 0;
+}
+
+.topbar {
+  background-color: #081f1c;
+  padding: 11px 20px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+}
+
+.topbar button {
+  background-color: white;
+  color: #12413b;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-left: 6px;
+  font-size: 13px;
+}
+
+.navbar {
+  background-color: #12443d;
+  padding: 0 20px;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  display: inline-block;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.navbar a:hover {
+  background-color: #05ddc8;
+}
+
+.content {
+  padding: 20px 30px;
+}
+
+.group-header {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.group-header h2 {
+  margin: 0 0 4px 0;
+  color: #333;
+}
+
+.group-header p {
+  margin: 3px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.group-info-right {
+  text-align: right;
+  font-size: 14px;
+}
+
+.group-info-right p {
+  margin: 4px 0;
+  color: #555;
+}
+
+.cards {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.card {
+  width: 130px;
+  padding: 18px;
+  border-radius: 8px;
+  text-align: center;
+  color: white;
+}
+
+.card h3 {
+  font-size: 30px;
+  margin: 0 0 5px 0;
+}
+
+.card p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.blue   { background-color: #4a90d9; }
+.green  { background-color: #5cb85c; }
+.orange { background-color: #f0ad4e; }
+.purple { background-color: #9b59b6; }
+
+.section {
+  background-color: white;
+  padding: 18px 20px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 18px;
+}
+
+.section h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.member-tag {
+  display: inline-block;
+  background-color: #eaf2ff;
+  border: 1px solid #b3d4f5;
+  color: #357abd;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  margin: 4px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th {
+  background-color: #081f1c;
+  color: white;
+  padding: 10px;
+  text-align: left;
+  font-size: 14px;
+}
+
+table td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}

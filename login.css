@@ -1,0 +1,112 @@
+body {
+  background-color: #f0f0f0;
+  font-family: Arial;
+  margin: 0;
+  padding: 0;
+}
+
+
+
+.topbar {
+  background-color: #081f1c;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.brand-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(5, 221, 200, 0.35));
+  animation: fadeIn 0.8s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.topbar h1 {
+  color: white;
+  margin: 0;
+  font-size: 25px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.box {
+  width: 360px;
+  margin: 50px auto;
+  background-color: white;
+  padding: 30px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.tabs {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.tabs button {
+  background-color: #ddd;
+  color: #333;
+  border: none;
+  padding: 9px 22px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 2px;
+  font-size: 14px;
+}
+
+.tabs button.active-tab {
+  background-color: #081f1c;
+  color: white;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  color: #555;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+input, select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+
+
+.btn-blue {
+  background-color: #081f1c;
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+  font-size: 15px;
+}
+
+.btn-blue:hover {
+  background-color: #05ddc8;
+}
+
+.msg {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+h3 {
+  margin-top: 0;
+  color: #333;
+}

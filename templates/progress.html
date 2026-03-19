@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group Pulse - Progress</title>
+  <link rel="stylesheet" href="../static/progress.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <span><b>Group Pulse</b></span>
+    <span id="welcomeMsg"></span>
+    <div>
+      <button onclick="goLobby()">← Back to Lobby</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="navbar">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/tasks">Tasks</a>
+    <a href="/progress">Progress</a>
+    <a href="/evaluation">Peer Evaluation</a>
+  </div>
+
+  <div class="content">
+    <h2>Progress Tracker</h2>
+    <p id="groupNameLabel"></p>
+
+    <!-- overall progress -->
+    <div class="section">
+      <h3>Overall Group Progress</h3>
+      <p id="progressLabel">0 out of 0 tasks completed</p>
+      <div class="bar-bg">
+        <div class="bar-fill" id="progressBar" style="width:0%;"></div>
+      </div>
+      <p id="progressPercent" class="percent">0%</p>
+    </div>
+
+    <!-- per member -->
+    <div class="section">
+      <h3>Progress Per Member</h3>
+      <div id="memberProgress"><p>No data yet.</p></div>
+    </div>
+
+    <!-- task breakdown -->
+    <div class="section">
+      <h3>All Tasks Status</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Assigned To</th>
+            <th>Due Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="progressTable">
+          <tr><td colspan="4">No tasks found.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    var loggedIn = null;
+    var activeGroupId = sessionStorage.getItem("gp_activeGroup");
+
+    if (!activeGroupId) {
+      window.location.href = "/lobby";
+    }
+
+    // get logged in user
+    fetch("/api/me")
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (!data.success) {
+        window.location.href = "/login";
+        return;
+      }
+
+      loggedIn = data.user;
+      document.getElementById("welcomeMsg").innerHTML = loggedIn.name + " (" + loggedIn.role + ")";
+
+      loadGroup();
+    });
+
+    function logout() {
+      fetch("/api/logout", { method: "POST" })
+      .then(function() {
+        window.location.href = "/login";
+      });
+    }
+
+    function goLobby() {
+      sessionStorage.removeItem("gp_activeGroup");
+      window.location.href = "/lobby";
+    }
+
+    function loadGroup() {
+      fetch("/api/groups/" + activeGroupId)
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (!data.success) {
+          window.location.href = "/lobby";
+          return;
+        }
+
+        var group = data.group;
+        document.getElementById("groupNameLabel").innerHTML = "Group: <b>" + group.name + "</b> — " + group.subject;
+
+        loadTasks(group);
+      });
+    }
+
+    function loadTasks(group) {
+      fetch("/api/groups/" + activeGroupId + "/tasks")
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        var tasks = data.tasks || [];
+
+        // overall progress
+        var total = tasks.length;
+        var done = 0;
+        for (var i = 0; i < tasks.length; i++) {
+          if (tasks[i].status == "Done") done++;
+        }
+
+        var percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+        document.getElementById("progressLabel").innerHTML = done + " out of " + total + " tasks completed";
+        document.getElementById("progressBar").style.width = percent + "%";
+        document.getElementById("progressPercent").innerHTML = percent + "%";
+
+        var bar = document.getElementById("progressBar");
+        if (percent < 30) bar.style.backgroundColor = "#d9534f";
+        else if (percent < 70) bar.style.backgroundColor = "#f0ad4e";
+        else bar.style.backgroundColor = "#5cb85c";
+
+        // per member progress
+        var members = group.members || [];
+        if (members.length == 0) {
+          document.getElementById("memberProgress").innerHTML = "<p>No members found.</p>";
+        } else {
+          var mHTML = "";
+          for (var i = 0; i < members.length; i++) {
+            var mName = members[i].name;
+            var mTotal = 0;
+            var mDone = 0;
+
+            for (var j = 0; j < tasks.length; j++) {
+              if (tasks[j].assignedTo == mName) {
+                mTotal++;
+                if (tasks[j].status == "Done") mDone++;
+              }
+            }
+
+            var mPercent = mTotal > 0 ? Math.round((mDone / mTotal) * 100) : 0;
+            var mColor = mPercent >= 70 ? "#5cb85c" : mPercent >= 30 ? "#f0ad4e" : "#d9534f";
+            if (mTotal == 0) mColor = "#ccc";
+
+            mHTML += "<div class='member-row'>";
+            mHTML += "<p><b>" + mName + "</b> &nbsp; " + mDone + " / " + mTotal + " tasks done</p>";
+            mHTML += "<div class='bar-bg'><div class='bar-fill' style='width:" + mPercent + "%; background-color:" + mColor + ";'></div></div>";
+            mHTML += "<p class='percent'>" + mPercent + "%</p>";
+            mHTML += "</div>";
+          }
+          document.getElementById("memberProgress").innerHTML = mHTML;
+        }
+
+        // task status table
+        if (tasks.length == 0) {
+          document.getElementById("progressTable").innerHTML = "<tr><td colspan='4'>No tasks found.</td></tr>";
+        } else {
+          var tHTML = "";
+          for (var i = 0; i < tasks.length; i++) {
+            var c = tasks[i].status == "Done" ? "green" : "orange";
+            tHTML += "<tr>";
+            tHTML += "<td>" + tasks[i].name + "</td>";
+            tHTML += "<td>" + tasks[i].assignedTo + "</td>";
+            tHTML += "<td>" + tasks[i].dueDate + "</td>";
+            tHTML += "<td style='color:" + c + ";'><b>" + tasks[i].status + "</b></td>";
+            tHTML += "</tr>";
+          }
+          document.getElementById("progressTable").innerHTML = tHTML;
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

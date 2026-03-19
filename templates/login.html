@@ -2,13 +2,13 @@
 <html>
 <head>
   <title>Group Pulse - Login</title>
-  <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="../static/login.css">
 </head>
 <body>
 
   <div class="topbar">
   <div class="brand">
-    <img src="logo.png" alt="Group Pulse" class="brand-logo">
+    <img src="../static/logo.png" alt="Group Pulse" class="brand-logo">
     <h1>Group<span style="color:#05ddc8">PULSE</span></h1>
   </div>
   </div>
@@ -87,27 +87,28 @@
         return;
       }
 
-      var users = JSON.parse(localStorage.getItem("gp_users") || "[]");
-      var found = null;
-
-      for (var i = 0; i < users.length; i++) {
-        if (users[i].email == email && users[i].password == password) {
-          found = users[i];
-          break;
+      fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          document.getElementById("loginMsg").style.color = "green";
+          document.getElementById("loginMsg").innerHTML = "Login successful! Redirecting...";
+          setTimeout(function() {
+            window.location.href = "/lobby";
+          }, 1000);
+        } else {
+          document.getElementById("loginMsg").style.color = "red";
+          document.getElementById("loginMsg").innerHTML = data.message;
         }
-      }
-
-      if (found) {
-        localStorage.setItem("gp_loggedIn", JSON.stringify(found));
-        document.getElementById("loginMsg").style.color = "green";
-        document.getElementById("loginMsg").innerHTML = "Login successful! Redirecting...";
-        setTimeout(function() {
-          window.location.href = "lobby.html";
-        }, 1000);
-      } else {
+      })
+      .catch(function(error) {
         document.getElementById("loginMsg").style.color = "red";
-        document.getElementById("loginMsg").innerHTML = "Wrong email or password!";
-      }
+        document.getElementById("loginMsg").innerHTML = "Something went wrong. Try again!";
+      });
     }
 
     function doRegister() {
@@ -122,29 +123,25 @@
         return;
       }
 
-      var users = JSON.parse(localStorage.getItem("gp_users") || "[]");
-
-      for (var i = 0; i < users.length; i++) {
-        if (users[i].email == email) {
+      fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, email: email, password: password, role: role })
+      })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          document.getElementById("registerMsg").style.color = "green";
+          document.getElementById("registerMsg").innerHTML = data.message;
+        } else {
           document.getElementById("registerMsg").style.color = "red";
-          document.getElementById("registerMsg").innerHTML = "Email already registered!";
-          return;
+          document.getElementById("registerMsg").innerHTML = data.message;
         }
-      }
-
-      var newUser = {
-        id: "user_" + Date.now(),
-        name: name,
-        email: email,
-        password: password,
-        role: role
-      };
-
-      users.push(newUser);
-      localStorage.setItem("gp_users", JSON.stringify(users));
-
-      document.getElementById("registerMsg").style.color = "green";
-      document.getElementById("registerMsg").innerHTML = "Account created! You can now login.";
+      })
+      .catch(function(error) {
+        document.getElementById("registerMsg").style.color = "red";
+        document.getElementById("registerMsg").innerHTML = "Something went wrong. Try again!";
+      });
     }
 
     document.getElementById("loginTab").className = "active-tab";

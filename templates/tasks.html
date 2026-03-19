@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group Pulse - Tasks</title>
+  <link rel="stylesheet" href="../static/tasks.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <span><b>Group Pulse</b></span>
+    <span id="welcomeMsg"></span>
+    <div>
+      <button onclick="goLobby()">← Back to Lobby</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="navbar">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/tasks">Tasks</a>
+    <a href="/progress">Progress</a>
+    <a href="/evaluation">Peer Evaluation</a>
+  </div>
+
+  <div class="content">
+    <h2>Task Assignment</h2>
+
+    <!-- leader only: add task form -->
+    <div id="leaderSection" style="display:none;">
+      <div class="form-box">
+        <h3>Add New Task <span class="leader-badge">Leader Only</span></h3>
+
+        <label>Task Name:</label>
+        <input type="text" id="taskName" placeholder="e.g. Write introduction" />
+
+        <label>Assign To:</label>
+        <select id="taskAssign">
+          <option value="">-- Select Member --</option>
+        </select>
+
+        <label>Due Date:</label>
+        <input type="date" id="taskDue" />
+
+        <label>Description:</label>
+        <textarea id="taskDesc" rows="3" placeholder="Brief description..."></textarea>
+
+        <br><br>
+        <button class="btn-blue" onclick="addTask()">Add Task</button>
+        <p id="taskMsg" class="msg"></p>
+      </div>
+    </div>
+
+    <!-- notice for regular students -->
+    <div id="studentNotice" style="display:none;">
+      <div class="notice-box">
+        <p>Only the <b>Group Leader</b> can assign tasks. You can view tasks assigned to you below.</p>
+      </div>
+    </div>
+
+    <!-- notice for instructors -->
+    <div id="instructorNotice" style="display:none;">
+      <div class="notice-box">
+        <p>You are viewing this page as an <b>Instructor</b>. Task assignment is managed by the group leader.</p>
+      </div>
+    </div>
+
+    <!-- tasks table -->
+    <div class="section">
+      <h3>All Tasks</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Task Name</th>
+            <th>Assigned To</th>
+            <th>Due Date</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tasksTable">
+          <tr><td colspan="7">No tasks yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    var loggedIn = null;
+    var activeGroupId = sessionStorage.getItem("gp_activeGroup");
+    var isLeader = false;
+    var isInstructor = false;
+
+    if (!activeGroupId) {
+      window.location.href = "/lobby";
+    }
+
+    // get logged in user
+    fetch("/api/me")
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (!data.success) {
+        window.location.href = "/login";
+        return;
+      }
+
+      loggedIn = data.user;
+      isInstructor = loggedIn.role == "instructor";
+      document.getElementById("welcomeMsg").innerHTML = loggedIn.name + " (" + loggedIn.role + ")";
+
+      loadGroup();
+    });
+
+    function logout() {
+      fetch("/api/logout", { method: "POST" })
+      .then(function() {
+        window.location.href = "/login";
+      });
+    }
+
+    function goLobby() {
+      sessionStorage.removeItem("gp_activeGroup");
+      window.location.href = "/lobby";
+    }
+
+    function loadGroup() {
+      fetch("/api/groups/" + activeGroupId)
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (!data.success) {
+          window.location.href = "/lobby";
+          return;
+        }
+
+        var group = data.group;
+
+        // check if current user is the leader
+        isLeader = group.leaderId == loggedIn.id;
+
+        if (isInstructor) {
+          document.getElementById("instructorNotice").style.display = "block";
+        } else if (isLeader) {
+          document.getElementById("leaderSection").style.display = "block";
+
+          // load members into dropdown
+          var dropdown = document.getElementById("taskAssign");
+          for (var i = 0; i < group.members.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = group.members[i].id;
+            opt.innerHTML = group.members[i].name;
+            dropdown.appendChild(opt);
+          }
+        } else {
+          document.getElementById("studentNotice").style.display = "block";
+        }
+
+        loadTasks();
+      });
+    }
+
+    function addTask() {
+      var name = document.getElementById("taskName").value;
+      var assignTo = document.getElementById("taskAssign").value;
+      var dueDate = document.getElementById("taskDue").value;
+      var desc = document.getElementById("taskDesc").value;
+
+      if (name == "" || assignTo == "" || dueDate == "") {
+        document.getElementById("taskMsg").style.color = "red";
+        document.getElementById("taskMsg").innerHTML = "Please fill in all required fields!";
+        return;
+      }
+
+      fetch("/api/groups/" + activeGroupId + "/tasks/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, assignedTo: assignTo, dueDate: dueDate, description: desc })
+      })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          document.getElementById("taskMsg").style.color = "green";
+          document.getElementById("taskMsg").innerHTML = "Task added successfully!";
+
+          document.getElementById("taskName").value = "";
+          document.getElementById("taskAssign").value = "";
+          document.getElementById("taskDue").value = "";
+          document.getElementById("taskDesc").value = "";
+
+          loadTasks();
+        } else {
+          document.getElementById("taskMsg").style.color = "red";
+          document.getElementById("taskMsg").innerHTML = data.message;
+        }
+      });
+    }
+
+    function markDone(taskId) {
+      fetch("/api/tasks/" + taskId + "/done", { method: "POST" })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) loadTasks();
+      });
+    }
+
+    function deleteTask(taskId) {
+      fetch("/api/tasks/" + taskId + "/delete", { method: "POST" })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) loadTasks();
+      });
+    }
+
+    function loadTasks() {
+      fetch("/api/groups/" + activeGroupId + "/tasks")
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (!data.success || data.tasks.length == 0) {
+          document.getElementById("tasksTable").innerHTML = "<tr><td colspan='7'>No tasks yet.</td></tr>";
+          return;
+        }
+
+        var html = "";
+        for (var i = 0; i < data.tasks.length; i++) {
+          var t = data.tasks[i];
+          var c = t.status == "Done" ? "green" : "orange";
+          var isMyTask = t.assignedToId == loggedIn.id;
+
+          html += "<tr>";
+          html += "<td>" + (i + 1) + "</td>";
+          html += "<td>" + t.name + "</td>";
+          html += "<td>" + t.assignedTo + "</td>";
+          html += "<td>" + t.dueDate + "</td>";
+          html += "<td>" + (t.description || "-") + "</td>";
+          html += "<td style='color:" + c + ";'><b>" + t.status + "</b></td>";
+          html += "<td>";
+
+          if (t.status != "Done" && !isInstructor && (isMyTask || isLeader)) {
+            html += "<button class='btn-green' onclick='markDone(" + t.id + ")'>Mark Done</button> ";
+          }
+
+          if (isLeader) {
+            html += "<button class='btn-red' onclick='deleteTask(" + t.id + ")'>Delete</button>";
+          }
+
+          html += "</td></tr>";
+        }
+
+        document.getElementById("tasksTable").innerHTML = html;
+      });
+    }
+  </script>
+
+</body>
+</html>

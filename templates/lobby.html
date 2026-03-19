@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group Pulse - Lobby</title>
+  <link rel="stylesheet" href="../static/lobby.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <span><b>Group Pulse</b></span>
+    <span id="welcomeMsg"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="content">
+
+    <h2>My Groups</h2>
+
+    <!-- student actions -->
+    <div id="studentActions" style="display:none;">
+      <button class="btn-blue" onclick="showCreateForm()">+ Create New Group</button>
+      <button class="btn-outline" onclick="showJoinForm()">Join via Code</button>
+    </div>
+
+    <!-- instructor actions -->
+    <div id="instructorActions" style="display:none;">
+      <div class="notice-box">
+        <p>You are logged in as an <b>Instructor</b>. Enter a group code to view a group's progress and peer evaluations.</p>
+      </div>
+      <button class="btn-outline" onclick="showJoinForm()">Enter Group Code</button>
+    </div>
+
+    <!-- create group form (students only) -->
+    <div id="createForm" class="form-box" style="display:none;">
+      <h3>Create a New Group</h3>
+
+      <label>Group Name:</label>
+      <input type="text" id="gName" placeholder="e.g. Team Alpha" />
+
+      <label>Subject / Course Name:</label>
+      <input type="text" id="gSubject" placeholder="e.g. Software Engineering" />
+
+      <label>Description:</label>
+      <textarea id="gDesc" rows="3" placeholder="What is this group working on?"></textarea>
+
+      <label>Max Number of Members:</label>
+      <input type="number" id="gMax" placeholder="e.g. 5" min="2" max="20" />
+
+      <label>Project Due Date:</label>
+      <input type="date" id="gDue" />
+
+      <br><br>
+      <button class="btn-blue" onclick="createGroup()">Create Group</button>
+      <button class="btn-cancel" onclick="hideCreate()">Cancel</button>
+      <p id="createMsg" class="msg"></p>
+    </div>
+
+    <!-- join / enter code form -->
+    <div id="joinForm" class="form-box" style="display:none;">
+      <h3 id="joinFormTitle">Join a Group</h3>
+      <label>Enter Group Code:</label>
+      <input type="text" id="joinCode" placeholder="Paste the group code here" />
+      <br><br>
+      <button class="btn-blue" onclick="joinByCode()">Submit</button>
+      <button class="btn-cancel" onclick="hideJoin()">Cancel</button>
+      <p id="joinMsg" class="msg"></p>
+    </div>
+
+    <!-- groups list -->
+    <div id="groupsList" style="margin-top: 20px;">
+      <p>Loading your groups...</p>
+    </div>
+
+  </div>
+
+  <script>
+    var loggedIn = null;
+
+    // get logged in user from Flask session
+    fetch("/api/me")
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (!data.success) {
+        window.location.href = "/login";
+        return;
+      }
+
+      loggedIn = data.user;
+      document.getElementById("welcomeMsg").innerHTML = "Hello, " + loggedIn.name + " (" + loggedIn.role + ")";
+
+      if (loggedIn.role == "instructor") {
+        document.getElementById("instructorActions").style.display = "block";
+        document.getElementById("joinFormTitle").innerHTML = "View a Group";
+      } else {
+        document.getElementById("studentActions").style.display = "block";
+      }
+
+      // check if arrived via invite link
+      var urlParams = new URLSearchParams(window.location.search);
+      var inviteCode = urlParams.get("join");
+      if (inviteCode) {
+        document.getElementById("joinCode").value = inviteCode;
+        showJoinForm();
+        joinByCode();
+      }
+
+      loadGroups();
+    });
+
+    function logout() {
+      fetch("/api/logout", { method: "POST" })
+      .then(function() {
+        window.location.href = "/login";
+      });
+    }
+
+    function showCreateForm() {
+      document.getElementById("createForm").style.display = "block";
+      document.getElementById("joinForm").style.display = "none";
+    }
+
+    function hideCreate() {
+      document.getElementById("createForm").style.display = "none";
+    }
+
+    function showJoinForm() {
+      document.getElementById("joinForm").style.display = "block";
+      document.getElementById("createForm").style.display = "none";
+    }
+
+    function hideJoin() {
+      document.getElementById("joinForm").style.display = "none";
+    }
+
+    function createGroup() {
+      var name = document.getElementById("gName").value;
+      var subject = document.getElementById("gSubject").value;
+      var desc = document.getElementById("gDesc").value;
+      var max = document.getElementById("gMax").value;
+      var due = document.getElementById("gDue").value;
+
+      if (name == "" || subject == "" || max == "" || due == "") {
+        document.getElementById("createMsg").style.color = "red";
+        document.getElementById("createMsg").innerHTML = "Please fill in all required fields!";
+        return;
+      }
+
+      fetch("/api/groups/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, subject: subject, description: desc, maxMembers: max, dueDate: due })
+      })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          document.getElementById("createMsg").style.color = "green";
+          document.getElementById("createMsg").innerHTML = "Group created! Code: <b>" + data.code + "</b>";
+
+          document.getElementById("gName").value = "";
+          document.getElementById("gSubject").value = "";
+          document.getElementById("gDesc").value = "";
+          document.getElementById("gMax").value = "";
+          document.getElementById("gDue").value = "";
+
+          loadGroups();
+        } else {
+          document.getElementById("createMsg").style.color = "red";
+          document.getElementById("createMsg").innerHTML = data.message;
+        }
+      });
+    }
+
+    function joinByCode() {
+      var code = document.getElementById("joinCode").value.trim().toUpperCase();
+
+      if (code == "") {
+        document.getElementById("joinMsg").style.color = "red";
+        document.getElementById("joinMsg").innerHTML = "Please enter a group code!";
+        return;
+      }
+
+      fetch("/api/groups/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code })
+      })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          document.getElementById("joinMsg").style.color = "green";
+          document.getElementById("joinMsg").innerHTML = data.message;
+          loadGroups();
+        } else {
+          document.getElementById("joinMsg").style.color = "red";
+          document.getElementById("joinMsg").innerHTML = data.message;
+        }
+      });
+    }
+
+    function openGroup(groupId) {
+      sessionStorage.setItem("gp_activeGroup", groupId);
+      window.location.href = "/dashboard";
+    }
+
+    function loadGroups() {
+      fetch("/api/groups")
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        var container = document.getElementById("groupsList");
+
+        if (!data.success || data.groups.length == 0) {
+          if (loggedIn.role == "instructor") {
+            container.innerHTML = "<p>You have not joined any groups yet. Use a group code to get access.</p>";
+          } else {
+            container.innerHTML = "<p>You are not in any groups yet. Create one or join using a code!</p>";
+          }
+          return;
+        }
+
+        var html = "<div class='groups-grid'>";
+
+        for (var i = 0; i < data.groups.length; i++) {
+          var g = data.groups[i];
+
+          var badgeHTML = "";
+          if (g.myRole == "instructor") {
+            badgeHTML = "<span class='badge-instructor'>Instructor</span>";
+          } else if (g.myRole == "leader") {
+            badgeHTML = "<span class='badge-leader'>Leader</span>";
+          } else {
+            badgeHTML = "<span class='badge-member'>Member</span>";
+          }
+
+          html += "<div class='group-card'>";
+          html += "<div class='group-card-top'><h3>" + g.name + "</h3>" + badgeHTML + "</div>";
+          html += "<p class='subject'>" + g.subject + "</p>";
+          html += "<p class='desc'>" + (g.description || "No description.") + "</p>";
+          html += "<div class='group-meta'>";
+          html += "<span>👥 " + g.memberCount + " / " + g.maxMembers + " members</span>";
+          html += "<span>📅 Due: " + g.dueDate + "</span>";
+          html += "</div>";
+          html += "<p class='group-code'>Code: <b>" + g.code + "</b></p>";
+          html += "<p class='leader-name'>Leader: " + g.leaderName + "</p>";
+          html += "<button class='btn-blue' onclick='openGroup(" + g.id + ")'>Open Group</button>";
+          html += "</div>";
+        }
+
+        html += "</div>";
+        container.innerHTML = html;
+      });
+    }
+  </script>
+
+</body>
+</html>
